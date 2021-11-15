@@ -184,6 +184,7 @@ import WSEdit.Data.Algorithms
     , setOffset
     , setStatus
     , tryEditor
+    , getSelection
     )
 import WSEdit.Data.Pretty
     ( prettyEdConfig
@@ -668,11 +669,12 @@ undo = refuseOnReadOnly
 -- | Pipe all text through an external command.
 pipeThrough :: String -> WSEdit ()
 pipeThrough cmd = alterBuffer $ do
-    bold <- gets edLines
+    -- bold <- gets edLines
+    -- let old = unlinesPlus
+    --         $ map snd
+    --         $ B.toList bold
+    sel <- getSelection
 
-    let old = unlinesPlus
-            $ map snd
-            $ B.toList bold
 
     (ex, out, err) <- liftIO
         $ readCreateProcessWithExitCode
@@ -694,7 +696,7 @@ pipeThrough cmd = alterBuffer $ do
                 , use_process_jobs   = False
                 }
             )
-          old
+          (fromMaybe "" sel)
 
     setStatus $ show ex
 
