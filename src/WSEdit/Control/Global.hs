@@ -185,6 +185,7 @@ import WSEdit.Data.Algorithms
     , setStatus
     , tryEditor
     , getSelection
+    , delSelection
     )
 import WSEdit.Data.Pretty
     ( prettyEdConfig
@@ -199,6 +200,7 @@ import WSEdit.Util
     , unlinesPlus
     , withFst
     , withPair
+    , insertBefore
     )
 import WSEdit.WordTree
     ( empty
@@ -716,7 +718,7 @@ pipeThrough cmd = alterBuffer $ do
                $ zip (repeat False)
                $ linesPlus out
 
-            b' = fromMaybe (B.singleton (False, ""))
+            let b' = fromMaybe (B.singleton (False, ""))
                $ B.fromList
                $ zip (repeat False)
                $ linesPlus out
