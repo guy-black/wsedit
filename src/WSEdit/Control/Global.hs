@@ -669,10 +669,10 @@ undo = refuseOnReadOnly
 -- | Pipe all text through an external command.
 pipeThrough :: String -> WSEdit ()
 pipeThrough cmd = alterBuffer $ do
-    -- bold <- gets edLines
-    -- let old = unlinesPlus
-    --         $ map snd
-    --         $ B.toList bold
+    bold <- gets edLines
+    let old = unlinesPlus
+             $ map snd
+             $ B.toList bold
     sel <- getSelection
 
 
@@ -716,6 +716,14 @@ pipeThrough cmd = alterBuffer $ do
                $ zip (repeat False)
                $ linesPlus out
 
-            modify $ (\s -> s { edLines = b })
+            b' = fromMaybe (B.singleton (False, ""))
+               $ B.fromList
+               $ zip (repeat False)
+               $ linesPlus out
+
+            _ <- delSelection
+            bold' <- gets edLines
+
+            modify $ (\s -> s { edLines = (insertBefore b' bold') })
             validateCursor
             dictAddRec
