@@ -671,13 +671,15 @@ undo = refuseOnReadOnly
 -- | Pipe all text through an external command.
 pipeThrough :: String -> WSEdit ()
 pipeThrough cmd = alterBuffer $ do
-    bold <- gets edLines
-    let old = unlinesPlus
+    bold <- gets edLines -- old buffer
+
+    let old = unlinesPlus  -- old buffer as a massive blob of text
              $ map snd
              $ B.toList bold
+
     sel <- getSelection
 
-
+-- (exit code, output, err)
     (ex, out, err) <- liftIO
         $ readCreateProcessWithExitCode
             ( CreateProcess
