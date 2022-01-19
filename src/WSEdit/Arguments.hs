@@ -1,7 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-missing-import-lists #-}
 
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE BinaryLiterals #-}
 
 module WSEdit.Arguments
     ( parseArguments
@@ -127,7 +126,6 @@ import WSEdit.Data
         , vtyObj
         , wriCheck
         )
-    , EdDesign
     , EdState
         ( EdState
 #ifndef dev
@@ -177,6 +175,7 @@ import WSEdit.Util
     , unlinesPlus
     , withFst
     , withSnd
+    , headWDef
     )
 
 import qualified WSEdit.Buffer as B
@@ -303,26 +302,28 @@ parseArguments (c, s) = do
                                     $ allArgs
 
                             -- Get path to theme
-                            themeRoute = listToMaybe
+                            mayThemePath = listToMaybe
                                        $ catMaybes
                                        $ map (\case
-                                                   DisplayCustTheme x -> Just x
+                                                   DisplayThemeOn x -> Just x
                                                    _ -> Nothing
                                              )
                                        $ allArgs
+                            themePath = (\case
+                                            Nothing -> ""
+                                            Just p -> p) mayThemePath
 
-                            -- remove comments from theme file
-                            remComs = (unlines . filter (\y -> head y /= '#') . lines)
+                            -- remove comments, treat empty lines as a comment
+                            remComs = (unlines . filter (\y -> (headWDef '#' y) /= '#') . lines)
 
-                        mayFile <- (\case
-                                     Nothing -> return Nothing
-                                     Just b -> mayReadFile b) themeRoute
+                        mayFile <- mayReadFile themePath
 
                         -- Report if theme file selected but not found
-                        when ((themeRoute /= Nothing) && (mayFile == Nothing) )
+                        when ((mayThemePath /= Nothing) && (mayFile == Nothing) && (MetaFailsafe `notElem` allArgs))
                              $ abort (ExitFailure 1)
-                             $ "Theme file not found. Check file route "
-                            ++ "or remove -dct flag to use default theme"
+                             $ "Theme file not found at " ++ themePath
+                            ++ " use -dT flag to use default theme, or -mf to ignore"
+                            ++ " all configs that don't work"
 
                         -- True if there is a themefile that can't be read, false otherwise
                         themeUnreadable <- (\case
@@ -332,9 +333,12 @@ parseArguments (c, s) = do
                                                                Nothing -> return True) (remComs <$> mayFile)
 
                         -- Report if theme can't be read into EdDesign
-                        when ( themeUnreadable )
+                        when ( themeUnreadable && (MetaFailsafe `notElem` allArgs) )
                              $ abort (ExitFailure 1)
-                             $ "Theme file error"
+                             $ themePath ++ " couldn't be parsed, "
+                             ++ "compare it with the example theme file, or"
+                             ++ " check " ++ upstream ++ "/blob/master/CHANGES.md"
+                             ++ " if things broke without you changing anything"
 
                         -- Report parse errors and abort if no -mf is active.
                         when ( (not $ null parseErrors)
@@ -363,8 +367,14 @@ parseArguments (c, s) = do
                                 $ "\n\n"
                                ++ ppShow allArgs
 
+                        -- if -mf flag passed, and theme is unreadable or can't be found, remove theme from args
+                        let allArgs' = if ((MetaFailsafe `elem` allArgs) && (themeUnreadable || ((mayThemePath /= Nothing) && (mayFile == Nothing))))
+                                      then (filter (\case
+                                                         DisplayThemeOn _ -> False
+                                                         _ -> True) allArgs)
+                                      else allArgs
                         -- Apply arguments to config/state pair.
-                        (c', s') <- foldM applyArg (c, s) allArgs
+                        (c', s') <- foldM applyArg (c, s) allArgs'
 
                         -- State file processing
                         let sf = MetaStateFile `elem` allArgs
@@ -518,6 +528,7 @@ applyArg (c, s)  DebugWRIOff          = return (c { wriCheck     = False        
 applyArg (c, s)  DebugWRIOn           = return (c { wriCheck     = True                                    }, s)
 applyArg (c, s)  DisplayDotsOn        = return (c { drawBg       = True                                    }, s)
 applyArg (c, s)  DisplayDotsOff       = return (c { drawBg       = False                                   }, s)
+applyArg (c, s)  DisplayThemeOff      = return (c { edDesign     = def                                     }, s)
 applyArg (c, s)  DisplayInvBGOn       = return (c { edDesign     = brightTheme                             }, s)
 applyArg (c, s)  DisplayInvBGOff      = return (c { edDesign     = def                                     }, s)
 applyArg (c, s) (EditorIndSet    n  ) = return (c { tabWidth     = n                                       }, s)
@@ -579,7 +590,7 @@ applyArg (c, s) (SpecialSetFile  f  ) = return (c, s { fname = f })
 applyArg (c, s) (SpecialSetVPos  n  ) = return (c, s { loadPos = withFst (const n) $ loadPos s })
 applyArg (c, s) (SpecialSetHPos  n  ) = return (c, s { loadPos = withSnd (const n) $ loadPos s })
 
-applyArg (c, s) (DisplayCustTheme t ) = (readFile t) >>= (\x -> return ((unlines . filter (\y -> head y /= '#') . lines) x)) >>= (\x -> return(read x::PrettyEdDesign)) >>= (\x -> return (c {edDesign = (unPrettyEdDesign x)}, s))
+applyArg (c, s) (DisplayThemeOn t ) = (readFile t) >>= (\x -> return ((unlines . filter (\y -> (headWDef '#' y) /= '#') . lines) x)) >>= (\x -> return(read x::PrettyEdDesign)) >>= (\x -> return (c {edDesign = (unPrettyEdDesign x)}, s))
 
 #ifndef dev
 applyArg (c, s) (DisplayBadgeSet b  ) = return (c, s { badgeText   = Just b                     })

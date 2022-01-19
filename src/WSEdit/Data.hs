@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances
            , TypeSynonymInstances
-           , BinaryLiterals
                       #-}
 
 
@@ -111,7 +110,7 @@ import qualified WSEdit.Buffer as B
 
 -- | Version number constant.
 version :: String
-version = "1.2.4.2"
+version = "1.2.4.3"
 
 -- | Upstream URL.
 upstream :: String
@@ -523,6 +522,7 @@ instance Default EdDesign where
         , dCurrLnMod     = defAttr
                             `withBackColor` black
 
+
         , dBrMod         = defAttr
                             `withStyle`     reverseVideo
 
@@ -533,8 +533,7 @@ instance Default EdDesign where
 
         , dCharStyles    =
             [ (Whitesp    , defAttr
-                            `withForeColor` blue
-              )
+                            `withForeColor` blue              )
             , (Digit      , defAttr
                             `withForeColor` red
               )
