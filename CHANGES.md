@@ -1,25 +1,30 @@
 # Unreleased
 
+# v1.2.5
+
 ## New Features
 
 - `-ep` can now be used to preserve whitespace exactly on save. This should help
   with file formats that are particular sensitive to whitespace changes, such as
   patch files.
 
-- `-dt <path/to/file>` can now be used to add custom themes.  Example theme files
-  found in `/themes/` folder.  `default.wstheme` is heavily commented to help
-  explain things.  `-dT` will override any external theme, and `-mf` will ignore
-  theme file that can't be found or read.
+- `-dt <path/to/file>` can now be used to add custom themes.  Example theme
+  files found in `/themes/` folder.  `default.wstheme` is heavily commented to
+  help explain things. A huge Thank You to Guy Black for implementing this!
 
 ## Fixes
 
 - No longer clobbers symbolic links with atomic saves.
+- `Ctrl-A` now correctly selects all text if the file does not end with a
+  newline.
 
 ## Other Changes
 
 - Changed tab rendering again, now a marking character is placed both at the
   start and the end of the tab space.
 - New language definition for patch files.
+- Switched to stack LTS 18.28 for GHC 8.10.7.
+- `Ctrl-P` now respects selection.
 
 # v1.2.4
 
