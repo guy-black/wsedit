@@ -1,5 +1,14 @@
 # Unreleased
 
+## New Features
+
+- `-dc` now highlights the current column.
+
+## Other Changes
+
+- Changed the characters used to render the border, background and badge to make
+  the result look smoother.
+
 # v1.2.5
 
 ## New Features

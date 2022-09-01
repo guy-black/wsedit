@@ -110,7 +110,7 @@ import qualified WSEdit.Buffer as B
 
 -- | Version number constant.
 version :: String
-version = "1.2.5.0"
+version = "1.2.5.3"
 
 -- | Upstream URL.
 upstream :: String
@@ -125,7 +125,7 @@ data Stability = Prototype
 
 -- | Current release stability
 stability :: Stability
-stability = Release
+stability = Prototype
 
 
 
@@ -334,6 +334,9 @@ data EdConfig = EdConfig
     , drawBg       :: Bool
         -- ^ Whether or not to draw the background.
 
+    , colMarker    :: Bool
+        -- ^ Whether or not to highlight the current column.
+
     , dumpEvents   :: Bool
         -- ^ Whether or not to dump every received event to the status line.
 
@@ -407,6 +410,7 @@ mkDefConfig v k = EdConfig
                 , histSize     = 100
                 , tabWidth     = 4
                 , drawBg       = False
+                , colMarker    = False
                 , dumpEvents   = False
                 , atomicSaves  = True
                 , wriCheck     = True
@@ -515,7 +519,7 @@ instance Default EdDesign where
                             `withStyle`     bold
 
         , dBGChar        = '·'
-        , dColChar       = Just '|'
+        , dColChar       = Just '│'
         , dBGFormat      = defAttr
                             `withForeColor` black
 
@@ -529,7 +533,7 @@ instance Default EdDesign where
         , dJumpMarkFmt   = defAttr
                             `withForeColor` red
 
-        , dTabStr        = ('·', ' ', '|')
+        , dTabStr        = ('·', ' ', '│')
 
         , dCharStyles    =
             [ (Whitesp    , defAttr
@@ -609,7 +613,7 @@ brightTheme = EdDesign
                             `withStyle`     bold
 
         , dBGChar        = '·'
-        , dColChar       = Just '|'
+        , dColChar       = Just '│'
         , dBGFormat      = defAttr
                             `withForeColor` white
 
@@ -622,7 +626,7 @@ brightTheme = EdDesign
         , dJumpMarkFmt   = defAttr
                             `withForeColor` red
 
-        , dTabStr        = ('·', ' ', '|')
+        , dTabStr        = ('·', ' ', '│')
 
         , dCharStyles    =
             [ (Whitesp    , defAttr
