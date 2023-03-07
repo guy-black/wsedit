@@ -60,11 +60,9 @@ import Graphics.Vty
     , black
     , blue
     , bold
-    , brightBlack
     , brightGreen
     , brightMagenta
     , brightRed
-    , brightWhite
     , brightYellow
     , cyan
     , green
@@ -110,7 +108,7 @@ import qualified WSEdit.Buffer as B
 
 -- | Version number constant.
 version :: String
-version = "1.2.5.3"
+version = "1.2.5.11"
 
 -- | Upstream URL.
 upstream :: String
@@ -125,7 +123,7 @@ data Stability = Prototype
 
 -- | Current release stability
 stability :: Stability
-stability = Prototype
+stability = WIP
 
 
 
@@ -479,6 +477,9 @@ data EdDesign = EdDesign
     , dCurrLnMod     :: Attr
         -- ^ Attribute modifications to apply to the current line
 
+    , dOverwrite     :: Attr
+        -- ^ Attribute for the cursor if overwrite is on
+
     , dBrMod         :: Attr
         -- ^ Attribute modifications for bracket matching.
 
@@ -506,17 +507,14 @@ instance Default EdDesign where
 
         , dStatusFormat  = defAttr
                             `withForeColor` brightGreen
-                            `withStyle`     bold
 
         , dLineNoFormat  = defAttr
                             `withForeColor` brightGreen
-                            `withStyle`     bold
         , dLineNoInterv  = 10
 
         , dColNoInterval = 40
         , dColNoFormat   = defAttr
                             `withForeColor` brightGreen
-                            `withStyle`     bold
 
         , dBGChar        = '·'
         , dColChar       = Just '│'
@@ -526,99 +524,10 @@ instance Default EdDesign where
         , dCurrLnMod     = defAttr
                             `withBackColor` black
 
-
-        , dBrMod         = defAttr
-                            `withStyle`     reverseVideo
-
-        , dJumpMarkFmt   = defAttr
-                            `withForeColor` red
-
-        , dTabStr        = ('·', ' ', '│')
-
-        , dCharStyles    =
-            [ (Whitesp    , defAttr
-                            `withForeColor` blue              )
-            , (Digit      , defAttr
-                            `withForeColor` red
-              )
-            , (Lower      , defAttr
-              )
-            , (Upper      , defAttr
-              )
-            , (Bracket    , defAttr
-                            `withForeColor` yellow
-              )
-            , (Operator   , defAttr
-                            `withForeColor` brightYellow
-                            `withStyle`     bold
-              )
-            , (Unprintable, defAttr
-                            `withForeColor` magenta
-                            `withStyle`     bold
-              )
-            , (Special    , defAttr
-                            `withForeColor` magenta
-              )
-            ]
-
-        , dHLStyles      =
-            [ (HComment , defAttr
-                            `withForeColor` brightMagenta
-                            `withStyle`     bold
-              )
-            , (HError   , defAttr
+        , dOverwrite     = defAttr
+                            `withForeColor` black
                             `withBackColor` brightRed
-                            `withStyle`     bold
-              )
-            , (HKeyword , defAttr
-                            `withForeColor` green
-              )
-            , (HSearch  , defAttr
-                            `withForeColor` brightRed
-                            `withStyle`     bold
-              )
-            , (HSelected, defAttr
-                            `withForeColor` brightBlack
-                            `withBackColor` white
-              )
-            , (HString  , defAttr
-                            `withForeColor` cyan
-              )
-            ]
 
-        }
-
-
-
-
-
--- | Alternate theme for terminals with bright backgrounds.
-brightTheme:: EdDesign
-brightTheme = EdDesign
-        { dFrameFormat   = defAttr
-                            `withForeColor` green
-
-        , dStatusFormat  = defAttr
-                            `withForeColor` brightGreen
-                            `withStyle`     bold
-
-        , dLineNoFormat  = defAttr
-                            `withForeColor` brightGreen
-                            `withStyle`     bold
-        , dLineNoInterv  = 10
-
-        , dColNoInterval = 40
-        , dColNoFormat   = defAttr
-                            `withForeColor` brightGreen
-                            `withStyle`     bold
-
-        , dBGChar        = '·'
-        , dColChar       = Just '│'
-        , dBGFormat      = defAttr
-                            `withForeColor` white
-
-        , dCurrLnMod     = defAttr
-                            `withBackColor` white
 
         , dBrMod         = defAttr
                             `withStyle`     reverseVideo
@@ -644,11 +553,102 @@ brightTheme = EdDesign
               )
             , (Operator   , defAttr
                             `withForeColor` brightYellow
-                            `withStyle`     bold
               )
             , (Unprintable, defAttr
                             `withForeColor` magenta
+              )
+            , (Special    , defAttr
+                            `withForeColor` magenta
+              )
+            ]
+
+        , dHLStyles      =
+            [ (HComment , defAttr
+                            `withForeColor` brightMagenta
+              )
+            , (HError   , defAttr
+                            `withForeColor` black
+                            `withBackColor` brightRed
                             `withStyle`     bold
+              )
+            , (HKeyword , defAttr
+                            `withForeColor` green
+              )
+            , (HSearch  , defAttr
+                            `withForeColor` black
+                            `withBackColor` green
+                            `withStyle`     bold
+              )
+            , (HSelected, defAttr
+                            `withStyle`     reverseVideo
+              )
+            , (HString  , defAttr
+                            `withForeColor` cyan
+              )
+            ]
+
+        }
+
+
+
+
+
+-- | Alternate theme for terminals with bright backgrounds.
+brightTheme:: EdDesign
+brightTheme = EdDesign
+        { dFrameFormat   = defAttr
+                            `withForeColor` green
+
+        , dStatusFormat  = defAttr
+                            `withForeColor` brightGreen
+
+        , dLineNoFormat  = defAttr
+                            `withForeColor` brightGreen
+        , dLineNoInterv  = 10
+
+        , dColNoInterval = 40
+        , dColNoFormat   = defAttr
+                            `withForeColor` brightGreen
+
+        , dBGChar        = '·'
+        , dColChar       = Just '│'
+        , dBGFormat      = defAttr
+                            `withForeColor` white
+
+        , dCurrLnMod     = defAttr
+                            `withBackColor` white
+
+        , dOverwrite     = defAttr
+                            `withForeColor` white
+                            `withBackColor` brightRed
+
+        , dBrMod         = defAttr
+                            `withStyle`     reverseVideo
+
+        , dJumpMarkFmt   = defAttr
+                            `withForeColor` red
+
+        , dTabStr        = ('·', ' ', '│')
+
+        , dCharStyles    =
+            [ (Whitesp    , defAttr
+                            `withForeColor` blue
+              )
+            , (Digit      , defAttr
+                            `withForeColor` red
+              )
+            , (Lower      , defAttr
+              )
+            , (Upper      , defAttr
+              )
+            , (Bracket    , defAttr
+                            `withForeColor` yellow
+              )
+            , (Operator   , defAttr
+                            `withForeColor` brightYellow
+              )
+            , (Unprintable, defAttr
+                            `withForeColor` magenta
               )
             , (Special    , defAttr
                             `withForeColor` magenta
@@ -661,9 +661,9 @@ brightTheme = EdDesign
               )
             , (HComment , defAttr
                             `withForeColor` brightMagenta
-                            `withStyle`     bold
               )
             , (HError   , defAttr
+                            `withForeColor` black
                             `withBackColor` brightRed
                             `withStyle`     bold
               )
@@ -671,12 +671,12 @@ brightTheme = EdDesign
                             `withForeColor` green
               )
             , (HSearch  , defAttr
-                            `withForeColor` brightRed
+                            `withForeColor` white
+                            `withBackColor` green
                             `withStyle`     bold
               )
             , (HSelected, defAttr
-                            `withForeColor` brightWhite
-                            `withBackColor` black
+                            `withStyle`     reverseVideo
               )
             , (HString  , defAttr
                             `withForeColor` cyan

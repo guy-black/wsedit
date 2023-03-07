@@ -7,8 +7,6 @@ module WSEdit.Output
     , charWidth
     , stringWidthRaw
     , stringWidth
-    , charRep
-    , lineRep
     , visToTxtPos
     , txtToVisPos
     , lineNoWidth
@@ -117,6 +115,7 @@ import WSEdit.Data
         , dLineNoFormat
         , dLineNoInterv
         , dJumpMarkFmt
+        , dOverwrite
         , dStatusFormat
         , dTabStr
         )
@@ -231,20 +230,21 @@ data CalcSnippet = CalcSnippet
     }
 
 
--- | Returns the visual representation of a character at a given buffer position
---   and in a given display column. The first argument toggles the bracket
---   format modifier.
-charRep :: Bool -> HighlightMode -> (Int, Int) -> Char -> WSEdit [Snippet]
-charRep br hl pos '\t' = do
-    (r, c)    <- getCursor
-    c'        <- txtToVisPos r c
+-- | Returns the visual representation of a character at a given position.
+charRep :: Bool           -- ^ Apply the bracket format modifier
+        -> HighlightMode  -- ^ Syntax highlighting mode
+        -> Int            -- ^ Visual cursor position (horizontal)
+        -> (Int, Int)     -- ^ Textual character position
+        -> Char           -- ^ Character to render
+        -> WSEdit [Snippet]
+charRep br hl visC pos '\t' = do
+    (r, _)    <- getCursor
     st        <- get
     conf      <- ask
     dispWidth <- charWidth (fst pos) (snd pos) '\t'
 
     let
         d       = edDesign   conf
-        currSty = dCurrLnMod d
         styBase = iff br (combineAttrs $ dBrMod d)
                 $ case hl of
                        HSelected -> lookupJustDef defAttr HSelected $ dHLStyles   d
@@ -252,40 +252,45 @@ charRep br hl pos '\t' = do
         str     = let (c1, c2, c3) = dTabStr d
                   in take dispWidth $ c1 : replicate (dispWidth - 2) c2 ++ [c3]
 
-    return $ if colMarker conf && snd pos <= c' && c' < snd pos + dispWidth
+    return $ if colMarker conf && snd pos <= visC && visC < snd pos + dispWidth
                 then [ Snippet
                         { sNominal = iff (r == fst pos && hl /= HSelected && not (readOnly st))
-                                         (flip combineAttrs currSty) styBase
-                        , sStr     = take (c' - snd pos) str
+                                         (flip combineAttrs $ dCurrLnMod d) styBase
+                        , sStr     = take (visC - snd pos) str
                         }
                      , Snippet
                         { sNominal = iff (hl /= HSelected && not (readOnly st))
-                                         (flip combineAttrs currSty) styBase
-                        , sStr     = [atNote (fqn "charRep") str $ c' - snd pos]
+                                         (if overwrite st && r == fst pos && visC == snd pos
+                                             then const $ dOverwrite d
+                                             else flip combineAttrs $ dCurrLnMod d
+                                         ) styBase
+                        , sStr     = [atNote (fqn "charRep") str $ visC - snd pos]
                         }
                      , Snippet
                         { sNominal = iff (r == fst pos && hl /= HSelected && not (readOnly st))
-                                         (flip combineAttrs currSty) styBase
-                        , sStr     = drop (c' - snd pos + 1) str
+                                         (flip combineAttrs $ dCurrLnMod d) styBase
+                        , sStr     = drop (visC - snd pos + 1) str
                         }
                      ]
                 else [ Snippet
                         { sNominal = iff (r == fst pos && hl /= HSelected && not (readOnly st))
-                                         (flip combineAttrs currSty) styBase
+                                         (flip combineAttrs $ dCurrLnMod d) styBase
                         , sStr     = str
                         }
                      ]
 
-charRep br hl pos ' ' = do
-    (r, c) <- getCursor
-    c'     <- txtToVisPos r c
+charRep br hl visC pos ' ' = do
+    (r, _) <- getCursor
     st     <- get
     conf   <- ask
     d      <- edDesign <$> ask
 
     return [ Snippet
-                { sNominal = iff ((r == fst pos || (colMarker conf && c' == snd pos)) && hl /= HSelected && not (readOnly st))
-                                 (flip combineAttrs $ dCurrLnMod d)
+                { sNominal = iff ((r == fst pos || (colMarker conf && visC == snd pos)) && hl /= HSelected && not (readOnly st))
+                                         (if overwrite st && r == fst pos && visC == snd pos
+                                             then const $ dOverwrite d
+                                             else flip combineAttrs $ dCurrLnMod d
+                                         )
                            $ iff br (combineAttrs $ dBrMod d)
                            $ lookupJustDef defAttr hl
                            $ dHLStyles d
@@ -294,17 +299,19 @@ charRep br hl pos ' ' = do
                 }
            ]
 
-charRep br hl pos ch = do
-    (r, c) <- getCursor
-    c'     <- txtToVisPos r c
+charRep br hl visC pos ch = do
+    (r, _) <- getCursor
     st     <- get
     conf   <- ask
     d      <- edDesign    <$> ask
     l      <- addnIdChars <$> ask
 
     return [ Snippet
-                { sNominal = iff ((r == fst pos || (colMarker conf && c' == snd pos)) && hl /= HSelected && not (readOnly st))
-                                 (flip combineAttrs $ dCurrLnMod d)
+                { sNominal = iff ((r == fst pos || (colMarker conf && visC == snd pos)) && hl /= HSelected && not (readOnly st))
+                                         (if overwrite st && r == fst pos && visC == snd pos
+                                             then const $ dOverwrite d
+                                             else flip combineAttrs $ dCurrLnMod d
+                                         )
                            $ iff br (combineAttrs $ dBrMod d)
                            $ lookupJustDef
                                 (lookupJustDef defAttr (charClass (addnIdChars conf) ch) (dCharStyles d))
@@ -319,10 +326,13 @@ charRep br hl pos ch = do
 
 
 
--- | Returns the visual representation of a line with a given line number at a
---   given horizontal offset.
-lineRep :: Int -> Int -> String -> WSEdit Image
-lineRep lNo off str = do
+-- | Returns the visual representation of a line.
+lineRep :: Int     -- ^ Visual cursor position (horizontal)
+        -> Int     -- ^ Line number
+        -> Int     -- ^ Horizontal offset
+        -> String  -- ^ Line
+        -> WSEdit Image
+lineRep visC lNo off str = do
     st     <- get
     maySel <- getSelBounds
     mayBr  <- getCurrBracket
@@ -344,6 +354,7 @@ lineRep lNo off str = do
                           (_            , Just s)                                          -> s
                           _                       | otherwise                              -> HNone
                     )
+                    visC
                     (lNo, vPos)
                     c
 
@@ -486,7 +497,7 @@ cursorOffScreen = do
     let (scrR, scrC) = scrollOffset s
 
     (curR, curC_) <- getCursor
-    curC <- txtToVisPos curR curC_
+    curC          <- txtToVisPos curR curC_
 
     (maxR, maxC) <- getViewportDimensions
 
@@ -665,11 +676,14 @@ makeTextFrame = do
     cC'                      <- txtToVisPos cR cC
 
     txt <- mapM (\(n, (b, l)) -> do
-                    lr <- lineRep n scrollCols l
+                    lr <- lineRep cC' n scrollCols l
                     w <- stringWidth n (scrollCols + 1) l
                     return (b, iff (not $ drawBg c)
                                    (<|> char ( iff ((n == cR || (colMarker c && w + 1 == cC')) && not (readOnly s))
-                                                   (combineAttrs $ dCurrLnMod d)
+                                                   (if overwrite s && n == cR && w + 1 == cC'
+                                                      then const $ dOverwrite d
+                                                      else flip combineAttrs $ dCurrLnMod d
+                                                   )
                                              $ lookupJustDef defAttr Whitesp
                                              $ dCharStyles d
                                              ) (dBGChar d)
@@ -689,12 +703,12 @@ makeTextFrame = do
                           (_                    , True) -> (char (dJumpMarkFmt d) '•' <|>)
 
                           (Just ((x, _), (y, _)), _   )
-                            | x == l && l == y -> (char (                                dLineNoFormat d) ' ' <|>)
-                            | x == l           -> (char (lookupJustDef defAttr Bracket $ dCharStyles   d) '┌' <|>)
-                            |           l == y -> (char (lookupJustDef defAttr Bracket $ dCharStyles   d) '└' <|>)
-                            | x <  l && l <  y -> (char (lookupJustDef defAttr Bracket $ dCharStyles   d) '│' <|>)
+                            | x == l && l == y -> (char (                                dBGFormat   d) '▋' <|>)
+                            | x == l           -> (char (lookupJustDef defAttr Bracket $ dCharStyles d) '┌' <|>)
+                            |           l == y -> (char (lookupJustDef defAttr Bracket $ dCharStyles d) '└' <|>)
+                            | x <  l && l <  y -> (char (lookupJustDef defAttr Bracket $ dCharStyles d) '│' <|>)
 
-                          _ -> (char (dLineNoFormat d) ' ' <|>)
+                          _ -> (char (dBGFormat d) '▋' <|>)
                     )
                     $ pad 0 0 1 0 ln
                  )
@@ -736,8 +750,8 @@ makeBackground = do
            $ drop scrollRows
            $ zip [1..]
            $ repeat
-           $ (\l -> ( '#' : take (c' - scrollCols - 1) l
-                    , if c' - scrollCols < 1 then "" else [atNote (fqn "makeBackground") l $ c' - scrollCols - 1]
+           $ (\l -> ( take (c' - scrollCols) l
+                    , if c' - scrollCols < 1 || c' - scrollCols > nCols then "" else [atNote (fqn "makeBackground") l $ c' - scrollCols - 1]
                     , drop (c' - scrollCols) l
                     )
              )
@@ -855,7 +869,7 @@ draw = do
 
     liftIO $ update (vtyObj c)
              Picture
-                { picCursor     = if readOnly s || ru + rd + cl + cr > 0
+                { picCursor     = if readOnly s || ru + rd + cl + cr > 0 || overwrite s
                                      then NoCursor
                                      else uncurry Cursor $ swap cursor
                 , picLayers     = [ bad

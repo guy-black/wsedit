@@ -8,6 +8,11 @@
 
 - Changed the characters used to render the border, background and badge to make
   the result look smoother.
+- Improved rendering of the gutter (the area immediately left to the text).
+- Removed bold formatting from the default editor themes (it looks quite bad on
+  some fonts).
+- Made search terms stand out more, and error formatting more readable.
+- The cursor now turns bright red if overwrite mode is active.
 
 # v1.2.5
 

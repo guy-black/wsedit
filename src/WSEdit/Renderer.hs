@@ -454,4 +454,4 @@ rebuildAll h = do
        then rebuildTk Nothing >> rebuildFmt Nothing
        else rebuildTk h       >> rebuildFmt h
 
-    modify $ \s' -> s' { fullRebdReq = False }
+    modify $ \s' -> s' { fullRebdReq  = False }
