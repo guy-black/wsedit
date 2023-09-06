@@ -3,6 +3,14 @@
 ## New Features
 
 - `-dc` now highlights the current column.
+- PageUp / PageDown now do something reasonable (move the viewport by 10 lines).
+
+## Fixes
+
+- Jumping around using `Ctrl-B` / `Ctrl-N` now correctly clears the selection.
+- Search terms are now porperly highlighted within line comments.
+- Jumping around using `Ctrl-B` / `Ctrl-N` now jumps as expected when there are
+  multiple search terms in the current line.
 
 ## Other Changes
 
@@ -13,6 +21,10 @@
   some fonts).
 - Made search terms stand out more, and error formatting more readable.
 - The cursor now turns bright red if overwrite mode is active.
+- Added popup for autocompletion.
+- Removed dependency on stale `hclip`. Clipboard support is now implemented
+  directly. Also, wayland clipboard support is now implemented via
+  `wl-clipboard`.
 
 # v1.2.5
 
